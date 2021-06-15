@@ -9,17 +9,18 @@ void main() {
     providers: [
       ChangeNotifierProvider(
         create: (BuildContext context) {
-          AlbumBottomNavProvider(0);
+          return AlbumBottomNavProvider(0);
         },
-      )
+      ),
     ],
     child: MyApp(),
   ));
 }
 
 Future<Album> fetchAlbumData(index) async {
+  int position = index + 1;
   final response = await http
-      .get(Uri.parse('https://jsonplaceholder.typicode.com/albums/$index'));
+      .get(Uri.parse('https://jsonplaceholder.typicode.com/albums/$position'));
   if (response.statusCode == 200) {
     return Album.fromJson(jsonDecode(response.body));
   } else {
@@ -34,17 +35,18 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Future<Album> futureAlbum;
-  int indexVar = 0;
+  int position = 0;
 
   @override
   void initState() {
     super.initState();
-    futureAlbum = fetchAlbumData(1);
+    futureAlbum = fetchAlbumData(position);
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // Define the default brightness and colors.
         brightness: Brightness.dark,
@@ -66,27 +68,47 @@ class _MyAppState extends State<MyApp> {
         child: Scaffold(
           appBar: AppBar(),
           body: Center(
-            child: BuildBodyMain(futureAlbum: futureAlbum),
+            child: buildCustomBody(),
           ),
-          bottomNavigationBar: BottomNav(),
+          bottomNavigationBar: buildCustomBotNavBar(),
         ),
       ),
     );
   }
-}
 
-class BuildBodyMain extends StatelessWidget {
-  BuildBodyMain({
-    Key? key,
-    required this.futureAlbum,
-  }) : super(key: key);
+  Consumer<AlbumBottomNavProvider> buildCustomBotNavBar() {
+    return Consumer<AlbumBottomNavProvider>(
+        builder: (context, controller, widget) {
+      return BottomNavigationBar(
+        onTap: (int index) => {controller.index = index, position = index},
+        currentIndex: controller.index,
+        items: [
+          buildBottomNavigationBarItem(
+            Icon(Icons.movie_creation),
+            'Movie',
+          ),
+          buildBottomNavigationBarItem(
+            Icon(Icons.rate_review_sharp),
+            'Ranking',
+          ),
+          buildBottomNavigationBarItem(
+            Icon(Icons.find_in_page),
+            'Find',
+          ),
+          buildBottomNavigationBarItem(
+            Icon(Icons.person),
+            'Mine',
+          ),
+        ],
+      );
+    });
+  }
 
-  final Future<Album> futureAlbum;
-
-  @override
-  Widget build(BuildContext context) {
+  Consumer<AlbumBottomNavProvider> buildCustomBody() {
     return Consumer<AlbumBottomNavProvider>(
       builder: (context, controller, widget) {
+        position = controller.index;
+        futureAlbum = fetchAlbumData(position);
         return FutureBuilder<Album>(
           future: futureAlbum,
           builder: (context, snapshot) {
@@ -99,6 +121,15 @@ class BuildBodyMain extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  BottomNavigationBarItem buildBottomNavigationBarItem(
+      Icon icon, String label) {
+    return BottomNavigationBarItem(
+      icon: icon,
+      label: label,
+      backgroundColor: Colors.blue,
     );
   }
 
@@ -129,37 +160,5 @@ class BuildBodyMain extends StatelessWidget {
           );
         }
     }
-  }
-}
-
-class BottomNav extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AlbumBottomNavProvider>(
-        builder: (context, controller, widget) {
-      return BottomNavigationBar(
-        onTap: (int index) => controller.index = index,
-        currentIndex: controller.index,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.movie_creation),
-            label: 'Movie',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.rate_review_sharp),
-            label: 'Ranking',
-            backgroundColor: Colors.blue,
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.find_in_page),
-            label: 'Find',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Mine',
-          ),
-        ],
-      );
-    });
   }
 }
